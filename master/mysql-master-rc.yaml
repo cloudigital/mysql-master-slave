@@ -1,0 +1,68 @@
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  namespace: default
+  name: mysql-master-pv-claim
+  labels:
+    app: mysql-master
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: v1
+kind: ReplicationController
+metadata:
+  namespace: default
+  name: mysql-master
+  labels:
+    name: mysql-master
+spec:
+  replicas: 1
+  selector:
+    name: mysql-master
+  template:
+    metadata:
+      labels:
+        name: mysql-master
+    spec:
+      containers:
+        - name: master
+          image: paulliu/mysql-master:0.1
+          ports:
+            - containerPort: 3306
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              value: "test"
+            - name: MYSQL_REPLICATION_USER
+              value: 'demo'
+            - name: MYSQL_REPLICATION_PASSWORD
+              value: 'demo'
+      #volumes:
+       # - name: mysql-data
+       #   hostPath:
+       #     path: /var/lib/mysql
+          volumeMounts:
+            - name: mysql-master-persistent-storage
+              mountPath: /var/lib/mysql
+      volumes:
+      - name: mysql-master-persistent-storage
+        persistentVolumeClaim:
+          claimName: mysql-master-pv-claim
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql-master
+  labels:
+    name: mysql-master
+spec:
+  ports:
+    - port: 3306
+      targetPort: 3306
+  selector:
+      name: mysql-master
+
